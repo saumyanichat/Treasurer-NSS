@@ -4,6 +4,7 @@ import com.nss.treasurer.dto.AccountDTO;
 import com.nss.treasurer.model.Account;
 import com.nss.treasurer.model.User;
 import com.nss.treasurer.repository.AccountRepository;
+import com.nss.treasurer.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,16 +15,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountService {
     private final AccountRepository accountRepository;
-    private final UserService userService;
+    private final UserRepository userRepository;
 
-    public List<Account> getAccountsByClerkUserId(String clerkUserId) {
-        User user = userService.getByClerkUserId(clerkUserId);
+    public List<Account> getAccountsByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return accountRepository.findByUserId(user.getId());
     }
 
     @Transactional
-    public Account createAccount(String clerkUserId, AccountDTO dto) {
-        User user = userService.getByClerkUserId(clerkUserId);
+    public Account createAccount(String email, AccountDTO dto) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         
         List<Account> existingAccounts = accountRepository.findByUserId(user.getId());
         boolean isFirstAccount = existingAccounts.isEmpty();
@@ -36,12 +39,49 @@ public class AccountService {
         Account account = Account.builder()
                 .name(dto.getName())
                 .type(dto.getType())
-                .balance(dto.getBalance())
+                .allocatedAmount(dto.getAllocatedAmount())
+                .balance(dto.getAllocatedAmount()) // Initial balance = Allocated Amount
                 .isDefault(shouldBeDefault)
                 .user(user)
                 .build();
 
         return accountRepository.save(account);
+    }
+
+    @Transactional
+    public Account updateAccount(String id, AccountDTO dto) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        account.setName(dto.getName());
+        account.setType(dto.getType());
+        
+        // Adjust balance if allocated amount changes
+        java.math.BigDecimal difference = dto.getAllocatedAmount().subtract(account.getAllocatedAmount());
+        account.setAllocatedAmount(dto.getAllocatedAmount());
+        account.setBalance(account.getBalance().add(difference));
+
+        if (dto.isDefault() && !account.isDefault()) {
+            unsetOtherDefaults(account.getUser().getId());
+            account.setDefault(true);
+        }
+
+        return accountRepository.save(account);
+    }
+
+    @Transactional
+    public void setDefaultAccount(String email, String id) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+        
+        boolean wasDefault = account.isDefault();
+        unsetOtherDefaults(user.getId());
+        
+        account.setDefault(!wasDefault);
+        accountRepository.save(account);
     }
 
     @Transactional
@@ -56,5 +96,12 @@ public class AccountService {
     public Account getAccountById(String id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Account not found"));
+    }
+
+    @Transactional
+    public void deleteAccount(String id) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+        accountRepository.delete(account);
     }
 }

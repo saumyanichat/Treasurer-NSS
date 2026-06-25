@@ -44,3 +44,11 @@ target/
 .env.local
 .env.*.local
 
+# Uploads directory
+backend/uploads/
+uploads/
+
+# Maven binary folder
+maven/
+
+

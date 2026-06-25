@@ -9,5 +9,6 @@ public class AccountDTO {
     private String name;
     private AccountType type;
     private BigDecimal balance;
+    private BigDecimal allocatedAmount;
     private boolean isDefault;
 }

@@ -1,5 +1,10 @@
 package com.nss.treasurer.model;
 
 public enum AccountType {
-    CURRENT, SAVINGS
+    NSS_CAMP,
+    SCHOOL_TEACHING,
+    TREE_PLANTATION,
+    BLOOD_DONATION,
+    EVENT_ACTIVITY,
+    OTHER
 }
