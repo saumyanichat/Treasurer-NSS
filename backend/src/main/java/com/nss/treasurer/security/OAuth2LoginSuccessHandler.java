@@ -74,13 +74,25 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // Generate JWT token
         String jwt = tokenProvider.generateToken(user.getEmail());
 
+        // Determine the frontend URL (fallback to localhost if ALLOWED_ORIGIN environment variable is not set)
+        String frontendUrl = System.getenv("ALLOWED_ORIGIN");
+        if (frontendUrl == null || frontendUrl.trim().isEmpty()) {
+            frontendUrl = "http://localhost:5173";
+        }
+        
+        frontendUrl = frontendUrl.trim();
+        if (frontendUrl.endsWith("/")) {
+            frontendUrl = frontendUrl.substring(0, frontendUrl.length() - 1);
+        }
+
         // Redirect back to frontend with the JWT token, email, and name
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth2/redirect")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth2/redirect")
                 .queryParam("token", jwt)
                 .queryParam("email", user.getEmail())
                 .queryParam("name", user.getName())
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
+
     }
 }

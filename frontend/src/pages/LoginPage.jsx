@@ -34,8 +34,11 @@ export default function LoginPage() {
   }
 
   const handleSocialAuth = (provider) => {
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider.toLowerCase()}`
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"
+    const backendRoot = apiBase.replace(/\/api\/?$/, '')
+    window.location.href = `${backendRoot}/oauth2/authorization/${provider.toLowerCase()}`
   }
+
 
   return (
     <div className="pt-32 pb-16 min-h-screen bg-gray-50 flex items-center justify-center px-4">
